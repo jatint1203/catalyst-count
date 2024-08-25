@@ -30,5 +30,35 @@ Catalyst Count is a Django-based web application designed for filtering and coun
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/catalyst-count.git
+git clone https://github.com/jatint1203/catalyst-count.git
 cd catalyst-count
+
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+
+pip install -r requirements.txt
+
+##Create .env
+
+SECRET_KEY=django-insecure-vs)y09qci^!fhsn9)ghn4^#+ab@%-+9*_7$n@vi&cdllyufb-b
+ALLOWED_HOSTS=*
+
+DB_NAME=catalyst_count
+DB_USER=postgres
+DB_PASSWORD=admin
+DB_HOST=localhost
+DB_PORT=5432
+
+
+#Run these 
+
+python manage.py makemigrations
+python manage.py migrate
+
+#create superuser
+
+python manage.py createsuperuser
+
+
+python manage.py runserver
