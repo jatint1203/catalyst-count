@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Page</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .container {
+            margin-top: 30px;
+        }
+        .logout-btn {
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">CompCount</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="upload-data.html">Upload Data</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="filter-data.html">Filter Data</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="user-details.html">Users</a>
+                </li>
+            </ul>
+            <button class="btn btn-outline-danger logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Page content here -->
+    <div class="container">
+        <h1>Welcome to the Index Page</h1>
+        <p id="welcome-message"></p>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Function to clear the token and redirect to login page
+        function clearTokenAndRedirect() {
+            localStorage.removeItem('bearerToken');
+            console.log("Token removed and redirecting to login page");
+            window.location.href = 'login.html';
+        }
+    
+        // Handle logout
+        function handleLogout() {
+            console.log("Logout button clicked");
+            clearTokenAndRedirect();
+        }
+    
+        // Fetch welcome message
+        function fetchWelcomeMessage() {
+            const token = localStorage.getItem('bearerToken');
+    
+            console.log("Stored token:", token);
+    
+            if (!token) {
+                console.log("No token found, redirecting to login page");
+                clearTokenAndRedirect();
+                return;
+            }
+    
+            console.log("Making API request with token");
+    
+            $.ajax({
+                url: 'http://127.0.0.1:8000/api/welcome/',
+                type: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                success: function(data) {
+                    console.log("API request successful");
+                    $('#welcome-message').text(data);
+                },
+                error: function(jqXHR) {
+                    console.log("API request failed with status:", jqXHR.status);
+                    if (jqXHR.status === 401) {
+                        console.log("Unauthorized, redirecting to login page");
+                        clearTokenAndRedirect();
+                    } else {
+                        $('#welcome-message').text('Failed to load data.');
+                    }
+                }
+            });
+        }
+    
+        // On page load
+        $(document).ready(function() {
+            console.log("Page loaded, fetching welcome message");
+            fetchWelcomeMessage();
+        });
+    </script>
+</body>
+</html>

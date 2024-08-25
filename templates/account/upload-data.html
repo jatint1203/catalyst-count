@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV File Upload with Progress Bar</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: Arial, sans-serif;
+        }
+        h2 {
+            color: #333;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        #upload-form {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-top: 50px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        input[type="file"] {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 30px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        button[disabled] {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        button.loading::after {
+            content: ' ...';
+            animation: ellipsis 1s infinite;
+        }
+        @keyframes ellipsis {
+            0% { content: ' ...'; }
+            33% { content: ' ..'; }
+            66% { content: ' .'; }
+            100% { content: ' ...'; }
+        }
+        #progress-wrapper {
+            width: 100%;
+            max-width: 400px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: none;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 22px;
+            background-color: #28a745;
+            text-align: center;
+            line-height: 22px;
+            color: white;
+            border-radius: 10px;
+            transition: width 0.4s ease;
+        }
+        #upload-message {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        .navbar {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .logout-btn {
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">CompCount</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="upload-data.html">Upload Data</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="filter-data.html">Filter Data</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="user-details.html">Users</a>
+                </li>
+            </ul>
+            <button class="btn btn-outline-danger logout-btn" onclick="handleLogout()">Logout</button>
+        </div>
+    </nav>
+    
+    <h2>Upload a CSV File</h2>
+    <form id="upload-form" onsubmit="event.preventDefault(); uploadFile();">
+        <input type="file" id="file-input" name="file" accept=".csv" class="form-control">
+        <button type="button" id="upload-button" onclick="uploadFile()">Upload</button>
+    </form>
+    <div id="progress-wrapper">
+        <div id="progress-bar">0%</div>
+    </div>
+    <div id="upload-message"></div>
+
+    <script>
+        // Function to clear the token and redirect to login page
+        function clearTokenAndRedirect() {
+            localStorage.removeItem('bearerToken');
+            console.log("Token removed and redirecting to login page");
+            window.location.href = 'login.html';
+        }
+    
+        // Handle logout
+        function handleLogout() {
+            console.log("Logout button clicked");
+            clearTokenAndRedirect();
+        }
+    
+        const MAX_RETRIES = 3;
+    
+        function uploadFile(retryCount = 0) {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            const uploadButton = document.getElementById('upload-button');
+            const progressWrapper = document.getElementById('progress-wrapper');
+            const progressBar = document.getElementById('progress-bar');
+            const uploadMessage = document.getElementById('upload-message');
+            const token = localStorage.getItem('bearerToken'); // Get the bearer token from local storage
+    
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+    
+            if (file.type !== 'text/csv' && file.name.split('.').pop().toLowerCase() !== 'csv') {
+                alert('Only CSV files are allowed.');
+                return;
+            }
+    
+            const formData = new FormData();
+            formData.append('file', file);
+    
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://127.0.0.1:8000/api/upload/', true);
+    
+            // Add bearer token to request headers if it exists
+            if (token) {
+                xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            } else {
+                // If no token, redirect to login page
+                clearTokenAndRedirect();
+                return;
+            }
+    
+            progressWrapper.style.display = 'block';
+            uploadButton.disabled = true;
+            uploadButton.classList.add('loading');
+    
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = Math.round(percentComplete) + '%';
+                }
+            };
+    
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    uploadMessage.textContent = 'File uploaded successfully!';
+                    resetUI();
+                } else if (xhr.status === 401) {
+                    // Handle 401 Unauthorized response
+                    clearTokenAndRedirect();
+                } else {
+                    if (retryCount < MAX_RETRIES) {
+                        retryUpload(retryCount);
+                    } else {
+                        uploadMessage.textContent = 'File upload failed after maximum retries.';
+                        resetUI();
+                    }
+                }
+            };
+    
+            xhr.onerror = function() {
+                if (retryCount < MAX_RETRIES) {
+                    retryUpload(retryCount);
+                } else {
+                    uploadMessage.textContent = 'Server unreachable. File upload failed.';
+                    resetUI();
+                }
+            };
+    
+            xhr.send(formData);
+        }
+    
+        function retryUpload(retryCount) {
+            setTimeout(() => {
+                console.log(`Retrying upload... Attempt ${retryCount + 1}`);
+                uploadFile(retryCount + 1);
+            }, 1000);
+        }
+    
+        function resetUI() {
+            const uploadButton = document.getElementById('upload-button');
+            const progressWrapper = document.getElementById('progress-wrapper');
+            const progressBar = document.getElementById('progress-bar');
+            const fileInput = document.getElementById('file-input');
+            const uploadMessage = document.getElementById('upload-message');
+    
+            uploadButton.disabled = false;
+            uploadButton.classList.remove('loading');
+            progressWrapper.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            fileInput.value = '';
+        }
+    </script>
+    
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
